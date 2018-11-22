@@ -19,8 +19,8 @@ type finder struct {
 }
 
 type PathElement struct {
-	Title string `json:"title"`
-	Url   string `json:"url"`
+	Title  string `json:"title"`
+	PageId string `json:"pageId"`
 }
 
 func GetPath(from string, to string) ([]PathElement, error) {
@@ -90,8 +90,8 @@ func (f *finder) findCandidateLink(from string) (string, error) {
 
 						f.visited[pageId] = true
 						f.path = append(f.path, PathElement{
-							Title: title,
-							Url:   pageId,
+							Title:  title,
+							PageId: pageId,
 						})
 					}
 				}
