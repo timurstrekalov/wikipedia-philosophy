@@ -5,6 +5,7 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"strings"
 )
@@ -29,6 +30,8 @@ func NewPathParser() *PathParser {
 }
 
 func (pp *PathParser) ParsePage(r io.Reader) (*Page, error) {
+	defer io.Copy(ioutil.Discard, r)
+
 	z := html.NewTokenizer(r)
 
 	depth := 0
