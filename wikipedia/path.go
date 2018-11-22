@@ -1,7 +1,6 @@
 package wikipedia
 
 import (
-	"fmt"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"io"
@@ -13,23 +12,23 @@ import (
 const wikiPrefix = "/wiki/"
 
 type Page struct {
-	Title          string
-	Id             string
-	FirstValidLink string
+	Title      string
+	Id         string
+	ValidLinks []string
 }
 
-type PathParser struct {
+type PageParser struct {
 	visited map[string]bool
 }
 
-func NewPathParser() *PathParser {
-	pp := &PathParser{}
+func NewPageParser() *PageParser {
+	pp := &PageParser{}
 	pp.visited = make(map[string]bool, 0)
 
 	return pp
 }
 
-func (pp *PathParser) ParsePage(r io.Reader) (*Page, error) {
+func (pp *PageParser) ParsePage(r io.Reader) (*Page, error) {
 	defer io.Copy(ioutil.Discard, r)
 
 	z := html.NewTokenizer(r)
@@ -43,6 +42,7 @@ func (pp *PathParser) ParsePage(r io.Reader) (*Page, error) {
 	inTitle := false
 
 	page := Page{}
+	page.ValidLinks = make([]string, 0, 8)
 
 	for {
 		tokenType := z.Next()
@@ -50,6 +50,10 @@ func (pp *PathParser) ParsePage(r io.Reader) (*Page, error) {
 
 		switch tokenType {
 		case html.ErrorToken:
+			if z.Err() == io.EOF {
+				goto done
+			}
+
 			return nil, z.Err()
 		case html.TextToken:
 			if inTitle {
@@ -91,8 +95,7 @@ func (pp *PathParser) ParsePage(r io.Reader) (*Page, error) {
 								nextPageId := strings.SplitAfter(strings.TrimPrefix(href, wikiPrefix), "#")[0]
 
 								if isValidPage(nextPageId) && !pp.visited[nextPageId] {
-									page.FirstValidLink = nextPageId
-									return &page, nil
+									page.ValidLinks = append(page.ValidLinks, nextPageId)
 								}
 							}
 						}
@@ -133,7 +136,8 @@ func (pp *PathParser) ParsePage(r io.Reader) (*Page, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("could not find candidate link on page %v", page)
+done:
+	return &page, nil
 }
 
 func getAttributeValue(t html.Token, attrName string) (bool, string) {

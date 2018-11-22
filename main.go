@@ -44,13 +44,13 @@ type PathElement struct {
 
 type pathFinder struct {
 	path   []PathElement
-	parser *wikipedia.PathParser
+	parser *wikipedia.PageParser
 }
 
 func getPath(from string, to string) ([]PathElement, error) {
 	f := pathFinder{}
 	f.path = make([]PathElement, 0, 8)
-	f.parser = wikipedia.NewPathParser()
+	f.parser = wikipedia.NewPageParser()
 
 	err := f.findPath(from, to)
 	if err != nil {
@@ -78,7 +78,7 @@ func (f *pathFinder) findPath(from string, to string) (error) {
 		return nil
 	}
 
-	return f.findPath(page.FirstValidLink, to)
+	return f.findPath(page.ValidLinks[0], to)
 }
 
 func (f *pathFinder) addPage(page *wikipedia.Page) {
