@@ -10,7 +10,7 @@ import (
 func main() {
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/", fs)
-	http.HandleFunc("/api/path", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/graph", func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
 		from := query.Get("from")
 		to := query.Get("to")
@@ -18,7 +18,7 @@ func main() {
 		path, err := getPath(from, to)
 
 		if err != nil {
-			log.Printf("error getting path from %s to %s: %v", from, to, err)
+			log.Printf("error creating graph from %s to %s: %v", from, to, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
