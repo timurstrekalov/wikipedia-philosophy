@@ -7,8 +7,6 @@ import (
 	"net/http"
 )
 
-const startUrl = "Special:Random"
-
 func main() {
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/", fs)
