@@ -44,6 +44,7 @@ func (pp *PageParser) ParsePage(r io.Reader) (*Page, error) {
 	page := Page{}
 	page.ValidLinks = make([]string, 0, 8)
 
+parseLoop:
 	for {
 		tokenType := z.Next()
 		token := z.Token()
@@ -51,7 +52,7 @@ func (pp *PageParser) ParsePage(r io.Reader) (*Page, error) {
 		switch tokenType {
 		case html.ErrorToken:
 			if z.Err() == io.EOF {
-				goto done
+				break parseLoop
 			}
 
 			return nil, z.Err()
@@ -136,7 +137,6 @@ func (pp *PageParser) ParsePage(r io.Reader) (*Page, error) {
 		}
 	}
 
-done:
 	return &page, nil
 }
 
