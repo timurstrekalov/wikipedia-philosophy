@@ -18,14 +18,14 @@ func main() {
 		path, err := getPath(from, to)
 
 		if err != nil {
-			log.Printf("error getting path from %s to %s: %s", from, to, err)
+			log.Printf("error getting path from %s to %s: %v", from, to, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		err = json.NewEncoder(w).Encode(path)
 		if err != nil {
-			log.Printf("error encoding JSON: %s", err)
+			log.Printf("error encoding JSON: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
