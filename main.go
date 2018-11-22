@@ -61,7 +61,7 @@ func getPath(from string, to string) ([]PathElement, error) {
 }
 
 func (f *pathFinder) findPath(from string, to string) (error) {
-	resp, err := http.Get("https://en.wikipedia.org/wiki/" + from)
+	resp, err := http.Get(wikipedia.ToURLString(from))
 	if err != nil {
 		return err
 	}

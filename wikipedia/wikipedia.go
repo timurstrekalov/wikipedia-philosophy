@@ -9,7 +9,12 @@ import (
 	"strings"
 )
 
+const baseURL = "https://en.wikipedia.org"
 const wikiPrefix = "/wiki/"
+
+func ToURLString(page string) string {
+	return baseURL + wikiPrefix + page;
+}
 
 type Page struct {
 	Title      string
