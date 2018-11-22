@@ -78,10 +78,6 @@ func (f *pathFinder) findPath(from string, to string) (error) {
 		return nil
 	}
 
-	if err != nil {
-		return err
-	}
-
 	return f.findPath(page.FirstValidLink, to)
 }
 
