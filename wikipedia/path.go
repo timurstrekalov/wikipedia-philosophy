@@ -5,21 +5,11 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"net/http"
-	"regexp"
+	"net/url"
 	"strings"
 )
 
 const wikiPrefix = "/wiki/"
-
-var wikiLinkRe *regexp.Regexp
-
-func init() {
-	var err error
-	wikiLinkRe, err = regexp.Compile(".+/wiki/(.+)")
-	if err != nil {
-		panic(err)
-	}
-}
 
 type finder struct {
 	from    string
@@ -30,7 +20,7 @@ type finder struct {
 
 type PathElement struct {
 	Title string `json:"title"`
-	Uri   string `json:"uri"`
+	Url   string `json:"url"`
 }
 
 func GetPath(from string, to string) ([]PathElement, error) {
@@ -91,12 +81,17 @@ func (f *finder) findCandidateLink(from string) (string, error) {
 			if token.DataAtom == atom.Link {
 				if ok, rel := getAttributeValue(token, "rel"); ok && rel == "canonical" {
 					if ok, href := getAttributeValue(token, "href"); ok {
-						uri := wikiLinkRe.ReplaceAllString(href, "$1")
+						pageUrl, err := url.Parse(href)
+						if err != nil {
+							return "", err
+						}
 
-						f.visited[uri] = true
+						pageId := strings.TrimPrefix(pageUrl.Path, wikiPrefix)
+
+						f.visited[pageId] = true
 						f.path = append(f.path, PathElement{
 							Title: title,
-							Uri:   uri,
+							Url:   pageId,
 						})
 					}
 				}
@@ -113,8 +108,11 @@ func (f *finder) findCandidateLink(from string) (string, error) {
 				case atom.A:
 					if content && openItalics == 0 && openParens == 0 && openParagraphs > 0 {
 						if ok, href := getAttributeValue(token, "href"); ok {
-							if strings.HasPrefix(href, wikiPrefix) && !strings.Contains(href, "wiktionary.org") {
-								page := strings.TrimPrefix(href, wikiPrefix)
+							if strings.HasPrefix(href, wikiPrefix) &&
+								!strings.Contains(href, "wiktionary.org") &&
+									!strings.Contains(href, "#cite-note") {
+
+								page := strings.SplitAfter(strings.TrimPrefix(href, wikiPrefix), "#")[0]
 
 								if isValidPage(page) && !f.visited[page] {
 									return page, nil

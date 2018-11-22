@@ -11,8 +11,9 @@ func main() {
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/", fs)
 	http.HandleFunc("/api/path", func(w http.ResponseWriter, r *http.Request) {
-		from := r.URL.Query().Get("from")
-		to := r.URL.Query().Get("to")
+		query := r.URL.Query()
+		from := query.Get("from")
+		to := query.Get("to")
 
 		path, err := wikipedia.GetPath(from, to)
 		if err != nil {

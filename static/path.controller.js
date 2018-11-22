@@ -7,10 +7,10 @@ angular.module('wikipedia', [])
         var nodeMap = {};
         var edgeMap = {};
 
-        function Node(label, uri) {
+        function Node(label, url) {
             this.id = ++nodeIdSequence;
             this.label = label;
-            this.uri = uri;
+            this.url = url;
         }
 
         function Edge(from, to) {
@@ -20,11 +20,11 @@ angular.module('wikipedia', [])
         }
 
         function toNode(data) {
-            if (!nodeMap[data.uri]) {
-                nodeMap[data.uri] = new Node(data.title, data.uri);
+            if (!nodeMap[data.url]) {
+                nodeMap[data.url] = new Node(data.title, data.url);
             }
 
-            return nodeMap[data.uri];
+            return nodeMap[data.url];
         }
 
         function toEdge(from, to) {
