@@ -4,65 +4,42 @@ import (
 	"fmt"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-	"net/http"
+	"io"
 	"net/url"
 	"strings"
 )
 
 const wikiPrefix = "/wiki/"
 
-type finder struct {
-	from    string
-	to      string
-	path    []PathElement
+type Page struct {
+	Title          string
+	Id             string
+	FirstValidLink string
+}
+
+type PathParser struct {
 	visited map[string]bool
 }
 
-type PathElement struct {
-	Title  string `json:"title"`
-	PageId string `json:"pageId"`
+func NewPathParser() *PathParser {
+	pp := &PathParser{}
+	pp.visited = make(map[string]bool, 0)
+
+	return pp
 }
 
-func GetPath(from string, to string) ([]PathElement, error) {
-	f := &finder{from: from, to: to}
-	f.path = make([]PathElement, 0, 8)
-	f.visited = make(map[string]bool, 0)
-
-	return f.getPath(f.from, f.to)
-}
-
-func (f *finder) getPath(from string, to string) ([]PathElement, error) {
-	candidateLink, err := f.findCandidateLink(from)
-	if from == to {
-		return f.path, nil
-	}
-
-	if err != nil {
-		return f.path, err
-	}
-
-	return f.getPath(candidateLink, to)
-}
-
-// FIXME side-effecty & hacky
-func (f *finder) findCandidateLink(from string) (string, error) {
-	resp, err := http.Get("https://en.wikipedia.org/wiki/" + from)
-	if err != nil {
-		return "", err
-	}
-
-	defer resp.Body.Close()
-
-	z := html.NewTokenizer(resp.Body)
+func (pp *PathParser) ParsePage(r io.Reader) (*Page, error) {
+	z := html.NewTokenizer(r)
 
 	depth := 0
 	openItalics := 0
 	openParens := 0
 	openParagraphs := 0
-	content := false
+	inContent := false
 	contentDepth := -1
 	inTitle := false
-	title := ""
+
+	page := Page{}
 
 	for {
 		tokenType := z.Next()
@@ -70,10 +47,10 @@ func (f *finder) findCandidateLink(from string) (string, error) {
 
 		switch tokenType {
 		case html.ErrorToken:
-			return "", z.Err()
+			return nil, z.Err()
 		case html.TextToken:
 			if inTitle {
-				title = strings.Replace(token.Data, " - Wikipedia", "", 1)
+				page.Title = strings.Replace(token.Data, " - Wikipedia", "", 1)
 			} else {
 				openParens += strings.Count(token.Data, "(") - strings.Count(token.Data, ")")
 			}
@@ -83,39 +60,36 @@ func (f *finder) findCandidateLink(from string) (string, error) {
 					if ok, href := getAttributeValue(token, "href"); ok {
 						pageUrl, err := url.Parse(href)
 						if err != nil {
-							return "", err
+							return nil, err
 						}
 
 						pageId := strings.TrimPrefix(pageUrl.Path, wikiPrefix)
-
-						f.visited[pageId] = true
-						f.path = append(f.path, PathElement{
-							Title:  title,
-							PageId: pageId,
-						})
+						pp.visited[pageId] = true
+						page.Id = pageId
 					}
 				}
 			}
 		case html.StartTagToken:
 			depth++
 
-			if content {
+			if inContent {
 				switch token.DataAtom {
 				case atom.I:
 					openItalics++
 				case atom.P:
 					openParagraphs++
 				case atom.A:
-					if content && openItalics == 0 && openParens == 0 && openParagraphs > 0 {
+					if inContent && openItalics == 0 && openParens == 0 && openParagraphs > 0 {
 						if ok, href := getAttributeValue(token, "href"); ok {
 							if strings.HasPrefix(href, wikiPrefix) &&
 								!strings.Contains(href, "wiktionary.org") &&
-									!strings.Contains(href, "#cite-note") {
+								!strings.Contains(href, "#cite-note") {
 
-								page := strings.SplitAfter(strings.TrimPrefix(href, wikiPrefix), "#")[0]
+								nextPageId := strings.SplitAfter(strings.TrimPrefix(href, wikiPrefix), "#")[0]
 
-								if isValidPage(page) && !f.visited[page] {
-									return page, nil
+								if isValidPage(nextPageId) && !pp.visited[nextPageId] {
+									page.FirstValidLink = nextPageId
+									return &page, nil
 								}
 							}
 						}
@@ -127,7 +101,7 @@ func (f *finder) findCandidateLink(from string) (string, error) {
 					inTitle = true
 				case atom.Div:
 					if ok, id := getAttributeValue(token, "id"); ok && id == "mw-content-text" {
-						content = true
+						inContent = true
 						contentDepth = depth
 					}
 				}
@@ -135,9 +109,9 @@ func (f *finder) findCandidateLink(from string) (string, error) {
 		case html.EndTagToken:
 			depth--
 
-			if content {
+			if inContent {
 				if depth == contentDepth {
-					content = false
+					inContent = false
 					contentDepth = -1
 				} else {
 					switch token.DataAtom {
@@ -156,7 +130,7 @@ func (f *finder) findCandidateLink(from string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("could not find candidate link on page %s", from)
+	return nil, fmt.Errorf("could not find candidate link on page %v", page)
 }
 
 func getAttributeValue(t html.Token, attrName string) (bool, string) {

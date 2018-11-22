@@ -15,7 +15,8 @@ func main() {
 		from := query.Get("from")
 		to := query.Get("to")
 
-		path, err := wikipedia.GetPath(from, to)
+		path, err := getPath(from, to)
+
 		if err != nil {
 			log.Printf("error getting path from %s to %s: %s", from, to, err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -34,4 +35,59 @@ func main() {
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		panic(err)
 	}
+}
+
+type PathElement struct {
+	Title  string `json:"title"`
+	PageId string `json:"pageId"`
+}
+
+type pathFinder struct {
+	path   []PathElement
+	parser *wikipedia.PathParser
+}
+
+func getPath(from string, to string) ([]PathElement, error) {
+	f := pathFinder{}
+	f.path = make([]PathElement, 0, 8)
+	f.parser = wikipedia.NewPathParser()
+
+	err := f.findPath(from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	return f.path, nil
+}
+
+func (f *pathFinder) findPath(from string, to string) (error) {
+	resp, err := http.Get("https://en.wikipedia.org/wiki/" + from)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	page, err := f.parser.ParsePage(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	f.addPage(page)
+
+	if from == to {
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return f.findPath(page.FirstValidLink, to)
+}
+
+func (f *pathFinder) addPage(page *wikipedia.Page) {
+	f.path = append(f.path, PathElement{
+		Title:  page.Title,
+		PageId: page.Id,
+	})
 }
