@@ -8,5 +8,8 @@
     <orderEntry type="library" name="jquery" level="application" />
     <orderEntry type="library" name="angular" level="application" />
     <orderEntry type="library" name="vis" level="application" />
+    <orderEntry type="library" name="jquery" level="application" />
+    <orderEntry type="library" name="angular" level="application" />
+    <orderEntry type="library" name="vis" level="application" />
   </component>
 </module>

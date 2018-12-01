@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/timurstrekalov/wikipedia-philosophy/wikipedia"
+	"github.com/timurstrekalov/wikipedia-philosophy/parser"
 	"log"
 	"net/http"
 )
@@ -44,13 +44,13 @@ type PathElement struct {
 
 type pathFinder struct {
 	path   []PathElement
-	parser *wikipedia.PageParser
+	parser *parser.PageParser
 }
 
 func getPath(from string, to string) ([]PathElement, error) {
 	f := pathFinder{}
 	f.path = make([]PathElement, 0, 8)
-	f.parser = wikipedia.NewPageParser()
+	f.parser = parser.NewPageParser()
 
 	err := f.findPath(from, to)
 	if err != nil {
@@ -61,7 +61,7 @@ func getPath(from string, to string) ([]PathElement, error) {
 }
 
 func (f *pathFinder) findPath(from string, to string) error {
-	resp, err := http.Get(wikipedia.ToURLString(from))
+	resp, err := http.Get(parser.ToURLString(from))
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (f *pathFinder) findPath(from string, to string) error {
 	return f.findPath(page.ValidLinks[0], to)
 }
 
-func (f *pathFinder) addPage(page *wikipedia.Page) {
+func (f *pathFinder) addPage(page *parser.Page) {
 	f.path = append(f.path, PathElement{
 		Title:  page.Title,
 		PageId: page.Id,

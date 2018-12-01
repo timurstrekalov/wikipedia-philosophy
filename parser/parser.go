@@ -1,4 +1,4 @@
-package wikipedia
+package parser
 
 import (
 	"golang.org/x/net/html"
