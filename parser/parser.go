@@ -9,12 +9,7 @@ import (
 	"strings"
 )
 
-const baseURL = "https://en.wikipedia.org"
-const wikiPrefix = "/wiki/"
-
-func ToURLString(page string) string {
-	return baseURL + wikiPrefix + page;
-}
+const linkPrefix = "/wiki/"
 
 type Page struct {
 	Title      string
@@ -76,7 +71,7 @@ parseLoop:
 							return nil, err
 						}
 
-						pageId := strings.TrimPrefix(pageUrl.Path, wikiPrefix)
+						pageId := strings.TrimPrefix(pageUrl.Path, linkPrefix)
 						pp.visited[pageId] = true
 						page.Id = pageId
 					}
@@ -94,11 +89,11 @@ parseLoop:
 				case atom.A:
 					if inContent && openItalics == 0 && openParens == 0 && openParagraphs > 0 {
 						if ok, href := getAttributeValue(token, "href"); ok {
-							if strings.HasPrefix(href, wikiPrefix) &&
+							if strings.HasPrefix(href, linkPrefix) &&
 								!strings.Contains(href, "wiktionary.org") &&
 								!strings.Contains(href, "#cite-note") {
 
-								nextPageId := strings.SplitAfter(strings.TrimPrefix(href, wikiPrefix), "#")[0]
+								nextPageId := strings.SplitAfter(strings.TrimPrefix(href, linkPrefix), "#")[0]
 
 								if isValidPage(nextPageId) && !pp.visited[nextPageId] {
 									page.ValidLinks = append(page.ValidLinks, nextPageId)
