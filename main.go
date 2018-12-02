@@ -32,7 +32,8 @@ func main() {
 			return
 		}
 
-		if err := json.NewEncoder(writer).Encode(path); err != nil {
+		err = json.NewEncoder(writer).Encode(path)
+		if err != nil {
 			log.Println(err)
 			writer.WriteHeader(http.StatusInternalServerError)
 			return
