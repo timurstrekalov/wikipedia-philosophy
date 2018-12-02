@@ -17,10 +17,12 @@ type Page struct {
 	ValidLinks []string
 }
 
+// Use NewPageParser() to construct a new instance
 type PageParser struct {
 	visited map[string]bool
 }
 
+// Creates a new PageParser, which remembers every visited page
 func NewPageParser() *PageParser {
 	pp := &PageParser{}
 	pp.visited = make(map[string]bool, 0)

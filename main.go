@@ -7,84 +7,74 @@ import (
 	"net/http"
 )
 
+const baseWikipediaURL = "https://en.wikipedia.org/wiki/"
+
+func toWikipediaURL(page string) string {
+	return baseWikipediaURL + page
+}
+
+// TODO
+// - expose static resources at /
+// - implement /api/path, taking query parameters "from" and "to", returning a JSON array of objects {pageId, title}
 func main() {
 	fs := http.FileServer(http.Dir("static"))
+
 	http.Handle("/", fs)
-	http.HandleFunc("/api/path", func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()
+	http.HandleFunc("/api/path", func(writer http.ResponseWriter, request *http.Request) {
+		query := request.URL.Query()
 		from := query.Get("from")
 		to := query.Get("to")
 
-		path, err := getPath(from, to)
-
+		path, err := findPath(from, to)
 		if err != nil {
-			log.Printf("error getting path from %s to %s: %v", from, to, err)
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Println(err)
+			writer.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		err = json.NewEncoder(w).Encode(path)
-		if err != nil {
-			log.Printf("error encoding JSON: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
+		if err := json.NewEncoder(writer).Encode(path); err != nil {
+			log.Println(err)
+			writer.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	})
 
 	addr := ":8080"
 	log.Printf("Listening on %s...\n", addr)
-	if err := http.ListenAndServe(addr, nil); err != nil {
+
+	err := http.ListenAndServe(addr, nil)
+	if err != nil {
 		panic(err)
 	}
 }
 
 type PathElement struct {
-	Title  string `json:"title"`
 	PageId string `json:"pageId"`
+	Title  string `json:"title"`
 }
 
-type pathFinder struct {
-	path   []PathElement
-	parser *parser.PageParser
+func findPath(from string, to string) ([]PathElement, error) {
+	pp := parser.NewPageParser()
+	path := make([]PathElement, 0, 8)
+	return findPathRecursively(from, to, path, pp)
 }
 
-func getPath(from string, to string) ([]PathElement, error) {
-	f := pathFinder{}
-	f.path = make([]PathElement, 0, 8)
-	f.parser = parser.NewPageParser()
-
-	err := f.findPath(from, to)
+func findPathRecursively(from string, to string, path []PathElement, pp *parser.PageParser) ([]PathElement, error) {
+	resp, err := http.Get(toWikipediaURL(from))
 	if err != nil {
 		return nil, err
 	}
-
-	return f.path, nil
-}
-
-func (f *pathFinder) findPath(from string, to string) error {
-	resp, err := http.Get("https://en.wikipedia.org/wiki/" + from)
-	if err != nil {
-		return err
-	}
 	defer resp.Body.Close()
 
-	page, err := f.parser.ParsePage(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	f.addPage(page)
+	page, err := pp.ParsePage(resp.Body)
+	path = append(path, PathElement{
+		PageId: page.Id,
+		Title: page.Title,
+	})
 
 	if from == to {
-		return nil
+		return path, nil
 	}
 
-	return f.findPath(page.ValidLinks[0], to)
-}
-
-func (f *pathFinder) addPage(page *parser.Page) {
-	f.path = append(f.path, PathElement{
-		Title:  page.Title,
-		PageId: page.Id,
-	})
+	return findPathRecursively(page.ValidLinks[0], to, path, pp)
 }
