@@ -55,27 +55,38 @@ type PathElement struct {
 }
 
 func findPath(from string, to string) ([]PathElement, error) {
-	pp := parser.NewPageParser()
 	path := make([]PathElement, 0, 8)
-	return findPathRecursively(from, to, path, pp)
+	pp := parser.NewPageParser()
+
+	for {
+		page, err := loadPage(pp, from)
+		if err != nil {
+			return nil, err
+		}
+
+		path = append(path, PathElement{
+			PageId: page.Id,
+			Title:  page.Title,
+		})
+
+		if from == to {
+			return path, nil
+		} else {
+			from = page.ValidLinks[0]
+		}
+	}
 }
 
-func findPathRecursively(from string, to string, path []PathElement, pp *parser.PageParser) ([]PathElement, error) {
-	resp, err := http.Get(toWikipediaURL(from))
+func loadPage(pp *parser.PageParser, pageName string) (*parser.Page, error) {
+	wikipediaURL := toWikipediaURL(pageName)
+
+	log.Printf("requesting page %s", wikipediaURL)
+
+	resp, err := http.Get(wikipediaURL)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	page, err := pp.ParsePage(resp.Body)
-	path = append(path, PathElement{
-		PageId: page.Id,
-		Title: page.Title,
-	})
-
-	if from == to {
-		return path, nil
-	}
-
-	return findPathRecursively(page.ValidLinks[0], to, path, pp)
+	return pp.ParsePage(resp.Body)
 }
