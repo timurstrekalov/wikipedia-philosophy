@@ -58,7 +58,7 @@ func findPath(from string, to string) ([]PathElement, error) {
 	path := make([]PathElement, 0, 8)
 	parser := parsing.NewPageParser()
 
-	for from != to {
+	for {
 		page, err := loadPage(parser, from)
 		if err != nil {
 			return nil, err
@@ -68,6 +68,10 @@ func findPath(from string, to string) ([]PathElement, error) {
 			PageId: page.Id,
 			Title:  page.Title,
 		})
+
+		if from == to {
+			break
+		}
 
 		from = page.ValidLinks[0]
 	}
