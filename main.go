@@ -2,15 +2,15 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/timurstrekalov/wikipedia-philosophy/parser"
+	"github.com/timurstrekalov/wikipedia-philosophy/parsing"
 	"log"
 	"net/http"
 )
 
-const baseWikipediaURL = "https://en.wikipedia.org/wiki/"
+const basePageURL = "https://en.wikipedia.org/wiki/"
 
-func toWikipediaURL(page string) string {
-	return baseWikipediaURL + page
+func toPageURL(page string) string {
+	return basePageURL + page
 }
 
 // TODO
@@ -56,10 +56,10 @@ type PathElement struct {
 
 func findPath(from string, to string) ([]PathElement, error) {
 	path := make([]PathElement, 0, 8)
-	pp := parser.NewPageParser()
+	parser := parsing.NewPageParser()
 
 	for from != to {
-		page, err := loadPage(pp, from)
+		page, err := loadPage(parser, from)
 		if err != nil {
 			return nil, err
 		}
@@ -75,16 +75,16 @@ func findPath(from string, to string) ([]PathElement, error) {
 	return path, nil
 }
 
-func loadPage(pp *parser.PageParser, pageName string) (*parser.Page, error) {
-	wikipediaURL := toWikipediaURL(pageName)
+func loadPage(parser *parsing.PageParser, page string) (*parsing.Page, error) {
+	pageURL := toPageURL(page)
 
-	log.Printf("requesting page %s", wikipediaURL)
+	log.Printf("requesting page %s", pageURL)
 
-	resp, err := http.Get(wikipediaURL)
+	resp, err := http.Get(pageURL)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	return pp.ParsePage(resp.Body)
+	return parser.ParsePage(resp.Body)
 }
